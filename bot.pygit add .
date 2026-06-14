@@ -1,0 +1,53 @@
+import discord
+from discord.ext import commands
+import yt_dlp
+import os
+
+intents = discord.Intents.default()
+intents.message_content = True
+
+bot = commands.Bot(command_prefix="!", intents=intents)
+
+ytdl_opts = {
+    'format': 'bestaudio/best',
+    'quiet': True,
+}
+
+ffmpeg_opts = {
+    'options': '-vn'
+}
+
+@bot.event
+async def on_ready():
+    print(f"บอทออนไลน์: {bot.user}")
+
+@bot.command()
+async def play(ctx, *, url):
+    if not ctx.voice_client:
+        if ctx.author.voice:
+            await ctx.author.voice.channel.connect()
+        else:
+            return await ctx.send("❌ คุณต้องอยู่ในห้องเสียงก่อน")
+
+    with yt_dlp.YoutubeDL(ytdl_opts) as ydl:
+        info = ydl.extract_info(url, download=False)
+        audio_url = info['url']
+        title = info.get('title', 'ไม่ทราบชื่อ')
+
+    source = discord.FFmpegPCMAudio(audio_url, **ffmpeg_opts)
+    ctx.voice_client.play(source)
+    await ctx.send(f"🎵 กำลังเปิด: **{title}**")
+
+@bot.command()
+async def stop(ctx):
+    if ctx.voice_client:
+        ctx.voice_client.stop()
+        await ctx.send("⏹ หยุดเพลงแล้ว")
+
+@bot.command()
+async def leave(ctx):
+    if ctx.voice_client:
+        await ctx.voice_client.disconnect()
+        await ctx.send("👋 ออกจากห้องเสียงแล้ว")
+
+bot.run(os.environ["MTUxNTMwNDY0ODIyNjExNTc0NQ.Gn-mPF.liHPeRUJ8wf1mpYN3syIP1wWILyosKJuhrFzHA"])
